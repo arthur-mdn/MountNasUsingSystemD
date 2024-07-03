@@ -12,14 +12,13 @@ fi
 
 . config.ini
 
+# Définir les chemins de montage
 MOUNT_PATH_NAS_DOCUMENTS=/mnt/NAS_Documents
-mkdir -p "$MOUNT_PATH_NAS_DOCUMENTS"
-
 MOUNT_PATH_NAS_PUBLIC=/mnt/NAS_Public
-mkdir -p "$MOUNT_PATH_NAS_PUBLIC"
-
 MOUNT_PATH_NAS_VMS=/mnt/NAS_VMS
-mkdir -p "$MOUNT_PATH_NAS_VMS"
+
+# Créer les répertoires de montage
+mkdir -p "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
 
 # Créer fichier credentials
 cat >/etc/systemd.cred.edissyum-nas << EOF
@@ -30,16 +29,38 @@ EOF
 
 # sudo mount -t cifs //192.168.10.10/Documents /mnt/NAS_Documents -o credentials=/etc/systemd.cred.edissyum-nas
 
-# Créer NAS_Documents
-cat > /etc/systemd/system/$(systemd-escape -p --suffix=mount "$MOUNT_PATH_NAS_DOCUMENTS") <<EOF
+
+# Fonction pour arrêter et supprimer une unité de montage systemd si elle existe
+remove_mount_unit() {
+  local mount_path=$1
+  local unit_name=$(systemd-escape -p --suffix=mount "$mount_path")
+
+  if systemctl is-active --quiet $unit_name; then
+    systemctl stop $unit_name
+  fi
+
+  if systemctl is-enabled --quiet $unit_name; then
+    systemctl disable $unit_name
+  fi
+
+  rm -f /etc/systemd/system/$unit_name
+}
+
+# Fonction pour créer une unité de montage systemd
+create_mount_unit() {
+  local mount_path=$1
+  local share_path=$2
+  local unit_name=$(systemd-escape -p --suffix=mount "$mount_path")
+
+  cat > /etc/systemd/system/$unit_name <<EOF
 [Unit]
-Description=cifs mount script
+Description=cifs mount script for $share_path
 Requires=network-online.target
 After=network-online.service
 
 [Mount]
-What=//192.168.10.10/Documents
-Where=$MOUNT_PATH_NAS_DOCUMENTS
+What=$share_path
+Where=$mount_path
 Options=credentials=/etc/systemd.cred.edissyum-nas
 Type=cifs
 
@@ -47,53 +68,18 @@ Type=cifs
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable $(systemd-escape -p --suffix=mount "$MOUNT_PATH_NAS_DOCUMENTS")
-systemctl start $(systemd-escape -p --suffix=mount "$MOUNT_PATH_NAS_DOCUMENTS")
-systemctl status $(systemd-escape -p --suffix=mount "$MOUNT_PATH_NAS_DOCUMENTS")
+  systemctl daemon-reload
+  systemctl enable $unit_name
+  systemctl start $unit_name
+  systemctl status $unit_name
+}
 
+# Supprimer les unités de montage existantes
+remove_mount_unit "$MOUNT_PATH_NAS_DOCUMENTS"
+remove_mount_unit "$MOUNT_PATH_NAS_PUBLIC"
+remove_mount_unit "$MOUNT_PATH_NAS_VMS"
 
-# Créer NAS_Public
-cat > /etc/systemd/system/$(systemd-escape -p --suffix=mount "$MOUNT_PATH_NAS_PUBLIC") <<EOF
-[Unit]
-Description=cifs mount script
-Requires=network-online.target
-After=network-online.service
-
-[Mount]
-What=//192.168.10.10/Public
-Where=$MOUNT_PATH_NAS_PUBLIC
-Options=credentials=/etc/systemd.cred.edissyum-nas
-Type=cifs
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable $(systemd-escape -p --suffix=mount "$MOUNT_PATH_NAS_PUBLIC")
-systemctl start $(systemd-escape -p --suffix=mount "$MOUNT_PATH_NAS_PUBLIC")
-systemctl status $(systemd-escape -p --suffix=mount "$MOUNT_PATH_NAS_PUBLIC")
-
-
-# Créer NAS_VMS
-cat > /etc/systemd/system/$(systemd-escape -p --suffix=mount "$MOUNT_PATH_NAS_VMS") <<EOF
-[Unit]
-Description=cifs mount script
-Requires=network-online.target
-After=network-online.service
-
-[Mount]
-What=//192.168.10.10/VMs
-Where=$MOUNT_PATH_NAS_VMS
-Options=credentials=/etc/systemd.cred.edissyum-nas
-Type=cifs
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable $(systemd-escape -p --suffix=mount "$MOUNT_PATH_NAS_VMS")
-systemctl start $(systemd-escape -p --suffix=mount "$MOUNT_PATH_NAS_VMS")
-systemctl status $(systemd-escape -p --suffix=mount "$MOUNT_PATH_NAS_VMS")
+# Créer les unités de montage
+create_mount_unit "$MOUNT_PATH_NAS_DOCUMENTS" "//192.168.10.10/Documents"
+create_mount_unit "$MOUNT_PATH_NAS_PUBLIC" "//192.168.10.10/Public"
+create_mount_unit "$MOUNT_PATH_NAS_VMS" "//192.168.10.10/VMs"
