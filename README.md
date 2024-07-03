@@ -22,3 +22,12 @@ domain=edissyum
 ```bash
 sudo ./start.sh
 ```
+
+## Utilisation sans fichier credentials (ticket kerberos)
+
+### Lancement
+
+```bash
+sudo ./start_without_clear_credentials.sh
+```
+
