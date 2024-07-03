@@ -17,10 +17,8 @@ cat >/etc/krb5.conf <<EOF
 
 [realms]
     EDISSYUM.LAN = {
-        kdc = srv-ad-01.edissyum.lan
-        kdc = srv-ad-02.edissyum.lan
-        admin_server = srv-ad-01.edissyum.lan
-        admin_server = srv-ad-02.edissyum.lan
+        kdc = 192.168.10.250
+        admin_server = 192.168.10.250
     }
 
 [domain_realm]
