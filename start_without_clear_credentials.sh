@@ -6,7 +6,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Installation des paquets nécessaires
-apt-get install -y krb5-user cifs-utils
+apt-get install -y krb5-user cifs-utils keyutils
 
 # Configuration de Kerberos
 cat >/etc/krb5.conf <<EOF
@@ -27,11 +27,34 @@ cat >/etc/krb5.conf <<EOF
 EOF
 
 # Obtenir un ticket Kerberos pour l'utilisateur
-read -p "Entrez votre nom d'utilisateur Kerberos: " USERNAME
-kinit $USERNAME
+read -p "Entrez votre nom d'utilisateur Kerberos (sans domaine): " USERNAME_SHORT
+USERNAME_FULL="${USERNAME_SHORT}@edissyum.lan"
+kinit $USERNAME_SHORT
 
 if [ $? -ne 0 ]; then
   echo "Échec de l'obtention du ticket Kerberos"
+  exit 1
+fi
+
+# Ensure full username is used for UID and GID retrieval
+if id -u "$USERNAME_FULL" > /dev/null 2>&1; then
+  USER_UID=$(id -u "$USERNAME_FULL")
+  USER_GID=$(id -g "$USERNAME_FULL")
+else
+  echo "Utilisateur inexistant: $USERNAME_FULL"
+  exit 1
+fi
+
+# Get the Kerberos cache file path
+KRB5CCNAME=$(klist | grep 'Ticket cache:' | awk '{print $3}')
+KRB5CCPATH=$(echo $KRB5CCNAME | sed 's|FILE:||')
+
+chown "$USER_UID:$USER_GID" "$KRB5CCPATH"
+chmod 777 "$KRB5CCPATH"
+
+# Vérifier si le ticket Kerberos est disponible
+if ! klist -s; then
+  echo "Aucun ticket Kerberos disponible"
   exit 1
 fi
 
@@ -74,7 +97,7 @@ After=network-online.service
 [Mount]
 What=$share_path
 Where=$mount_path
-Options=sec=krb5,cruid=$(id -u $USERNAME@edissyum.lan),uid=$(id -u $USERNAME@edissyum.lan),gid=$(id -g $USERNAME@edissyum.lan),multiuser
+Options=sec=krb5,cruid=$USER_UID,uid=$USER_UID,gid=$USER_GID,multiuser
 Type=cifs
 
 [Install]
@@ -96,4 +119,3 @@ remove_mount_unit "$MOUNT_PATH_NAS_VMS"
 create_mount_unit "$MOUNT_PATH_NAS_DOCUMENTS" "//192.168.10.10/Documents"
 create_mount_unit "$MOUNT_PATH_NAS_PUBLIC" "//192.168.10.10/Public"
 create_mount_unit "$MOUNT_PATH_NAS_VMS" "//192.168.10.10/VMs"
-
