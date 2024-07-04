@@ -36,7 +36,7 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Ensure full username is used for UID and GID retrieval
+# Utiliser USERNAME_FULL pour récupérer l'UID et l'GID
 if id -u "$USERNAME_FULL" > /dev/null 2>&1; then
   USER_UID=$(id -u "$USERNAME_FULL")
   USER_GID=$(id -g "$USERNAME_FULL")
@@ -45,7 +45,7 @@ else
   exit 1
 fi
 
-# Get the Kerberos cache file path
+# Obtenir le chemin du fichier de cache
 KRB5CCNAME=$(klist | grep 'Ticket cache:' | awk '{print $3}')
 KRB5CCPATH=$(echo $KRB5CCNAME | sed 's|FILE:||')
 
