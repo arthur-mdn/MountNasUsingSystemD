@@ -17,8 +17,15 @@ MOUNT_PATH_NAS_DOCUMENTS=/mnt/NAS_Documents
 MOUNT_PATH_NAS_PUBLIC=/mnt/NAS_Public
 MOUNT_PATH_NAS_VMS=/mnt/NAS_VMS
 
+# Obtenir les UID et GID de l'utilisateur qui a lancé la commande
+USER_UID=$(id -u $SUDO_USER)
+USER_GID=$(id -g $SUDO_USER)
+
 # Créer les répertoires de montage
 mkdir -p "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
+
+# Définir les permissions sur les répertoires de montage
+chown "$USER_UID:$USER_GID" "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
 
 # Créer fichier credentials
 cat >/etc/systemd.cred.edissyum-nas << EOF
@@ -61,7 +68,7 @@ After=network-online.service
 [Mount]
 What=$share_path
 Where=$mount_path
-Options=credentials=/etc/systemd.cred.edissyum-nas
+Options=credentials=/etc/systemd.cred.edissyum-nas,uid=$USER_UID,gid=$USER_GID,file_mode=0770,dir_mode=0770
 Type=cifs
 
 [Install]
