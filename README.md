@@ -31,7 +31,7 @@ sudo ./start.sh
 sudo ./start_without_clear_credentials.sh
 ```
 
-### Nettoyage
+## Nettoyage
 
 Utiliser le script `stop.sh` pour nettoyer et supprimer les points de montages.
 
