@@ -36,7 +36,7 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Utiliser USERNAME_FULL pour récupérer l'UID et l'GID
+# Utiliser USERNAME_FULL pour récupérer l'UID et le GID
 if id -u "$USERNAME_FULL" > /dev/null 2>&1; then
   USER_UID=$(id -u "$USERNAME_FULL")
   USER_GID=$(id -g "$USERNAME_FULL")
@@ -63,8 +63,9 @@ MOUNT_PATH_NAS_DOCUMENTS=/mnt/NAS_Documents
 MOUNT_PATH_NAS_PUBLIC=/mnt/NAS_Public
 MOUNT_PATH_NAS_VMS=/mnt/NAS_VMS
 
-# Créer les répertoires de montage
-mkdir -p "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
+# Obtenir les UID et GID de l'utilisateur qui a lancé la commande
+USER_UID=$(id -u $SUDO_USER)
+USER_GID=$(id -g $SUDO_USER)
 
 # Fonction pour arrêter et supprimer une unité de montage systemd si elle existe
 remove_mount_unit() {
@@ -82,6 +83,20 @@ remove_mount_unit() {
   rm -f /etc/systemd/system/$unit_name
 }
 
+# Vérifier si les répertoires de montage sont vides et les supprimer si c'est le cas
+cleanup_mount_point() {
+  local mount_path=$1
+
+  if [ -d "$mount_path" ]; then
+    if [ -z "$(ls -A "$mount_path")" ]; then
+      echo "Removing empty mount point $mount_path..."
+      rmdir "$mount_path"
+    else
+      echo "Mount point $mount_path is not empty, not removing."
+    fi
+  fi
+}
+
 # Fonction pour créer une unité de montage systemd
 create_mount_unit() {
   local mount_path=$1
@@ -97,7 +112,7 @@ After=network-online.service
 [Mount]
 What=$share_path
 Where=$mount_path
-Options=sec=krb5,cruid=$USER_UID,uid=$USER_UID,gid=$USER_GID,multiuser
+Options=sec=krb5,cruid=$USER_UID,uid=$USER_UID,gid=$USER_GID,multiuser,file_mode=0770,dir_mode=0770
 Type=cifs
 
 [Install]
@@ -114,6 +129,17 @@ EOF
 remove_mount_unit "$MOUNT_PATH_NAS_DOCUMENTS"
 remove_mount_unit "$MOUNT_PATH_NAS_PUBLIC"
 remove_mount_unit "$MOUNT_PATH_NAS_VMS"
+
+cleanup_mount_point "$MOUNT_PATH_NAS_DOCUMENTS"
+cleanup_mount_point "$MOUNT_PATH_NAS_PUBLIC"
+cleanup_mount_point "$MOUNT_PATH_NAS_VMS"
+
+# Créer les répertoires de montage
+mkdir -p "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
+
+# Définir les permissions sur les répertoires de montage
+chown "$USER_UID:$USER_GID" "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
+chmod 770 "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
 
 # Créer les unités de montage
 create_mount_unit "$MOUNT_PATH_NAS_DOCUMENTS" "//192.168.10.10/Documents"

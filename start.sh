@@ -21,12 +21,6 @@ MOUNT_PATH_NAS_VMS=/mnt/NAS_VMS
 USER_UID=$(id -u $SUDO_USER)
 USER_GID=$(id -g $SUDO_USER)
 
-# Créer les répertoires de montage
-mkdir -p "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
-
-# Définir les permissions sur les répertoires de montage
-chown "$USER_UID:$USER_GID" "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
-
 # Créer fichier credentials
 cat >/etc/systemd.cred.edissyum-nas << EOF
 username=$USERNAME
@@ -51,6 +45,20 @@ remove_mount_unit() {
   fi
 
   rm -f /etc/systemd/system/$unit_name
+}
+
+# Vérifier si les répertoires de montage sont vides et les supprimer si c'est le cas
+cleanup_mount_point() {
+  local mount_path=$1
+
+  if [ -d "$mount_path" ]; then
+    if [ -z "$(ls -A "$mount_path")" ]; then
+      echo "Removing empty mount point $mount_path..."
+      rmdir "$mount_path"
+    else
+      echo "Mount point $mount_path is not empty, not removing."
+    fi
+  fi
 }
 
 # Fonction pour créer une unité de montage systemd
@@ -85,6 +93,22 @@ EOF
 remove_mount_unit "$MOUNT_PATH_NAS_DOCUMENTS"
 remove_mount_unit "$MOUNT_PATH_NAS_PUBLIC"
 remove_mount_unit "$MOUNT_PATH_NAS_VMS"
+
+# Recharger le daemon systemd pour appliquer les modifications
+echo "Reloading systemd daemon..."
+systemctl daemon-reload
+
+cleanup_mount_point "$MOUNT_PATH_NAS_DOCUMENTS"
+cleanup_mount_point "$MOUNT_PATH_NAS_PUBLIC"
+cleanup_mount_point "$MOUNT_PATH_NAS_VMS"
+
+echo "All specified mounts have been stopped and removed."
+
+# Créer les répertoires de montage
+mkdir -p "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
+
+# Définir les permissions sur les répertoires de montage
+chown "$USER_UID:$USER_GID" "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
 
 # Créer les unités de montage
 create_mount_unit "$MOUNT_PATH_NAS_DOCUMENTS" "//192.168.10.10/Documents"
