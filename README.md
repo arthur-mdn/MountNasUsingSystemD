@@ -31,3 +31,10 @@ sudo ./start.sh
 sudo ./start_without_clear_credentials.sh
 ```
 
+### Nettoyage
+
+Utiliser le script `stop.sh` pour nettoyer et supprimer les points de montages.
+
+```bash
+sudo ./stop.sh
+```
