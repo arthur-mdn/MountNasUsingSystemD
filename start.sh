@@ -12,105 +12,42 @@ fi
 
 . config.ini
 
-# Définir les chemins de montage
-MOUNT_PATH_NAS_DOCUMENTS=/mnt/NAS_Documents
-MOUNT_PATH_NAS_PUBLIC=/mnt/NAS_Public
-MOUNT_PATH_NAS_VMS=/mnt/NAS_VMS
-
-# Obtenir les UID et GID de l'utilisateur qui a lancé la commande
+MAIN_DIR=$(echo "$DIR" | cut -d "/" -f 1)
 USER_UID=$(id -u $SUDO_USER)
 USER_GID=$(id -g $SUDO_USER)
 
-# Créer fichier credentials
-cat >/etc/systemd.cred.edissyum-nas << EOF
+mkdir -p "$MOUNT_PATH"
+
+cat >/etc/systemd.cred.$DOMAIN << EOF
 username=$USERNAME
 password=$PASSWORD
 domain=$DOMAIN
 EOF
 
-# sudo mount -t cifs //192.168.10.10/Documents /mnt/NAS_Documents -o credentials=/etc/systemd.cred.edissyum-nas
+#echo "/etc/systemd.cred.$DOMAIN"
 
+unit_name=$(systemd-escape -p --suffix=mount "$MOUNT_PATH")
 
-# Fonction pour arrêter et supprimer une unité de montage systemd si elle existe
-remove_mount_unit() {
-  local mount_path=$1
-  local unit_name=$(systemd-escape -p --suffix=mount "$mount_path")
-
-  if systemctl is-active --quiet $unit_name; then
-    systemctl stop $unit_name
-  fi
-
-  if systemctl is-enabled --quiet $unit_name; then
-    systemctl disable $unit_name
-  fi
-
-  rm -f /etc/systemd/system/$unit_name
-}
-
-# Vérifier si les répertoires de montage sont vides et les supprimer si c'est le cas
-cleanup_mount_point() {
-  local mount_path=$1
-
-  if [ -d "$mount_path" ]; then
-    if [ -z "$(ls -A "$mount_path")" ]; then
-      echo "Removing empty mount point $mount_path..."
-      rmdir "$mount_path"
-    else
-      echo "Mount point $mount_path is not empty, not removing."
-    fi
-  fi
-}
-
-# Fonction pour créer une unité de montage systemd
-create_mount_unit() {
-  local mount_path=$1
-  local share_path=$2
-  local unit_name=$(systemd-escape -p --suffix=mount "$mount_path")
-
-  cat > /etc/systemd/system/$unit_name <<EOF
+cat > /etc/systemd/system/$unit_name <<EOF
 [Unit]
-Description=cifs mount script for $share_path
+Description=cifs mount script for $DIR
 Requires=network-online.target
 After=network-online.service
 
 [Mount]
-What=$share_path
-Where=$mount_path
-Options=credentials=/etc/systemd.cred.edissyum-nas,uid=$USER_UID,gid=$USER_GID,file_mode=0770,dir_mode=0770
+What=//$HOST/$DIR
+Where=$MOUNT_PATH
+Options=credentials=/etc/systemd.cred.$DOMAIN,uid=$USER_UID,gid=$USER_GID,file_mode=0770,dir_mode=0770
 Type=cifs
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-  systemctl daemon-reload
-  systemctl enable $unit_name
-  systemctl start $unit_name
-  systemctl status $unit_name
-}
+# echo "/etc/systemd/system/$unit_name"
 
-# Supprimer les unités de montage existantes
-remove_mount_unit "$MOUNT_PATH_NAS_DOCUMENTS"
-remove_mount_unit "$MOUNT_PATH_NAS_PUBLIC"
-remove_mount_unit "$MOUNT_PATH_NAS_VMS"
-
-# Recharger le daemon systemd pour appliquer les modifications
-echo "Reloading systemd daemon..."
 systemctl daemon-reload
+systemctl enable $unit_name
+systemctl start $unit_name
+systemctl status $unit_name
 
-cleanup_mount_point "$MOUNT_PATH_NAS_DOCUMENTS"
-cleanup_mount_point "$MOUNT_PATH_NAS_PUBLIC"
-cleanup_mount_point "$MOUNT_PATH_NAS_VMS"
-
-echo "All specified mounts have been stopped and removed."
-
-# Créer les répertoires de montage
-mkdir -p "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
-
-# Définir les permissions sur les répertoires de montage
-chown "$USER_UID:$USER_GID" "$MOUNT_PATH_NAS_DOCUMENTS" "$MOUNT_PATH_NAS_PUBLIC" "$MOUNT_PATH_NAS_VMS"
-
-# Créer les unités de montage
-create_mount_unit "$MOUNT_PATH_NAS_DOCUMENTS" "//192.168.10.10/Documents"
-create_mount_unit "$MOUNT_PATH_NAS_PUBLIC" "//192.168.10.10/Public"
-create_mount_unit "$MOUNT_PATH_NAS_VMS" "//192.168.10.10/VMs"
