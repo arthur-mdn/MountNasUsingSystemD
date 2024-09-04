@@ -6,6 +6,10 @@ Deux outils sont nécessaires pour tester et configurer un répertoire SAMBA.
 sudo apt-get install smbclient
 sudo apt-get install cifs-utils
 ```
+Puis clonez le repository
+```bash
+git clone https://github.com/arthur-mdn/MountSambaUsingSystemD.git
+```
 
 ## Configuration
 
