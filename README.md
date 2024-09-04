@@ -3,8 +3,7 @@
 ## Prérequis
 Deux outils sont nécessaires pour tester et configurer un répertoire SAMBA.
 ```bash
-sudo apt-get install smbclient
-sudo apt-get install cifs-utils
+sudo apt-get install smbclient cifs-utils
 ```
 Puis clonez le repository
 ```bash
