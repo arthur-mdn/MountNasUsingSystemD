@@ -43,9 +43,13 @@ smb: \> exit
 
 ## Lancement
 
+Une fois le test effectué, nous allons monter le répertoire en utilisant systemd.
+
 ```bash
 sudo ./start.sh
 ```
+
+Et voilà ! 
 
 ## Nettoyage
 
