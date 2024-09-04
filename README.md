@@ -12,17 +12,33 @@ git clone https://github.com/arthur-mdn/MountSambaUsingSystemD.git
 
 ## Configuration
 
+Se rendre dans le dossier du repository
+
+```bash
+cd MountSambaUsingSystemD
+```
+
 Dupliquer le fichier config.ini.default en config.ini 
 
 ```bash
 cp config.ini.default config.ini
 ```
 
-Modifier les paramètres 
+Modifier le fichier `config.ini`
+
+```
+nano config.ini
+```
+
+Et renseigner toutes les informations, selon les besoins
+
 ```ini
-username=edissyum
-password=edissyum
-domain=edissyum
+USERNAME=edissyum
+PASSWORD='edissyum'
+DOMAIN=edissyum
+HOST=192.192.192.192
+DIR='/edissyum/mem'
+MOUNT_PATH='/mnt/edissyum/mem'
 ```
 
 ## Test
