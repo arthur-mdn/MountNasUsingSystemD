@@ -1,8 +1,13 @@
-# MountNasUsingSystemD
+# MountSambaUsingSystemD
 
-## Utilisation avec fichier credentials (mdp en clair...)
+## Prérequis
+Deux outils sont nécessaires pour tester et configurer un répertoire SAMBA.
+```bash
+sudo apt-get install smbclient
+sudo apt-get install cifs-utils
+```
 
-### Configuration
+## Configuration
 
 Dupliquer le fichier config.ini.default en config.ini 
 
@@ -17,24 +22,31 @@ password=edissyum
 domain=edissyum
 ```
 
-### Lancement
+## Test
+
+Avant de tenter le montage, nous allons nous assurer que les identifiants sont corrects en lancant un script de test.
+
+```bash
+sudo ./check.sh
+```
+
+Si vous voyez `smb: \>` cela signifie que la connexion est correctement établie. 
+
+Vous pouvez poursuivre.
+
+```bash
+smb: \> exit
+``` 
+
+## Lancement
 
 ```bash
 sudo ./start.sh
 ```
 
-## Utilisation sans fichier credentials (ticket kerberos)
-
-### Lancement
-
-```bash
-sudo ./start_without_clear_credentials.sh
-```
-
 ## Nettoyage
 
-Utiliser le script `stop.sh` pour nettoyer et supprimer les points de montages.
-
+Si vous souhaitez démonter et supprimer le répertoire :
 ```bash
-sudo ./stop.sh
+sudo ./clear.sh
 ```

@@ -1,3 +1,6 @@
 USERNAME=edissyum
-PASSWORD=edissyum
+PASSWORD='edissyum'
 DOMAIN=edissyum
+HOST=192.192.192.192
+DIR='/edissyum/mem'
+MOUNT_PATH='/mnt/edissyum/mem'
